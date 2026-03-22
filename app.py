@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import joblib
 from prophet.plot import plot_plotly
+import plotly.graph_objs as go
 
 #set up web page
 st.set_page_config(page_title="Smart Phamar AI", layout="wide")
