@@ -7,119 +7,141 @@ import plotly.graph_objs as go
 # 1. Page Configuration
 st.set_page_config(page_title="PharmaPredict AI", layout="wide", page_icon="💊")
 
-# Custom CSS to make it look cleaner
+# Custom CSS for a clean, professional look
 st.markdown("""
     <style>
-    .main { background-color: #f5f7f9; }
+    .main { background-color: #f8f9fa; }
     .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
 
-# 2. Sidebar Navigation
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/822/822143.png", width=100)
-st.sidebar.title("Control Panel")
+# 2. Sidebar: Navigation & Settings
+st.sidebar.title("🎮 Control Panel")
 st.sidebar.markdown("---")
 
+# Drug Selection
+st.sidebar.subheader("🎯 Select Medicine")
+drug_list = ['N02BE', 'N05B', 'R03']
+selected_drug = st.sidebar.selectbox("Target Drug Code", drug_list)
+
+# Project Note
+st.sidebar.info("""
+**Note:** This is a prototype for demonstration. 
+We have selected the **Top 3 high-volume drugs** to showcase AI forecasting and inventory logic.
+""")
+
+st.sidebar.markdown("---")
 st.sidebar.subheader("🚚 Supply Chain Settings")
-lead_time = st.sidebar.number_input("Lead Time (Days to receive stock)", min_value=1, max_value=30, value=3)
+lead_time = st.sidebar.number_input("Lead Time (Days to receive stock)", 1, 30, 3)
 service_level = st.sidebar.select_slider(
     "Service Level (Confidence)",
     options=[0.90, 0.95, 0.99],
     value=0.95,
-    help="Higher service level means more safety stock to prevent shortages."
+    help="Higher service level increases safety stock to prevent shortages."
 )
 
-# 3. Load Data & Model
+# 3. Data & Model Loading
 @st.cache_resource
-def load_assets():
-    model = joblib.load('prophet_model_n02be.pkl')
-    df = pd.read_csv('data/daily_sales_cleaned.csv')
+def load_assets(drug_name):
+    # Dynamic path based on selected drug
+    model_path = f'prophet_model_{drug_name.lower()}.pkl'
+    model = joblib.load(model_path)
+    # Ensure this path matches your GitHub structure
+    df = pd.read_csv('data/daily_sales_cleaned.csv') 
     df['datum'] = pd.to_datetime(df['datum'])
     return model, df
 
 try:
-    model, df = load_assets()
+    model, df = load_assets(selected_drug)
 
-    # --- MAIN CONTENT ---
-    st.title("💊 PharmaPredict: AI Inventory Optimizer")
-    st.info("Target Medicine: **N02BE (Analgesics & Antipyretics)**")
+    # --- MAIN INTERFACE ---
+    st.title("🏥 Smart Pharma Inventory Dashboard")
+    st.markdown(f"Currently Analyzing: **{selected_drug}**")
 
-    # Create Tabs for better Organization
     tab1, tab2 = st.tabs(["📈 Demand Forecast", "📦 Inventory Strategy"])
 
     with tab1:
         st.subheader("AI-Driven Sales Prediction")
-        st.write("This chart shows historical sales data and the AI's prediction for the next 30 days.")
         
+        # 30-Day Forecast
         future = model.make_future_dataframe(periods=30)
         forecast = model.predict(future)
+
+        # Custom Plotly Graph with Legend
+        fig = go.Figure()
         
-        fig = plot_plotly(model, forecast)
-        fig.update_layout(title="Sales Trend & Forecast", xaxis_title="Date", yaxis_title="Units Sold")
+        # Actual Data
+        fig.add_trace(go.Scatter(x=df['datum'], y=df[selected_drug], 
+                                 name='Actual Sales', mode='markers', 
+                                 marker=dict(color='black', size=4)))
+        
+        # AI Forecast
+        fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], 
+                                 name='AI Forecast', mode='lines', 
+                                 line=dict(color='#007bff', width=2)))
+        
+        # Confidence Interval
+        fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat_upper'], 
+                                 mode='lines', line=dict(width=0), showlegend=False))
+        fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat_lower'], 
+                                 mode='lines', line=dict(width=0), 
+                                 fill='tonexty', fillcolor='rgba(0, 123, 255, 0.2)', 
+                                 name='Uncertainty Interval'))
+
+        fig.update_layout(
+            xaxis_title="Date",
+            yaxis_title="Units Sold",
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+            hovermode="x unified"
+        )
         st.plotly_chart(fig, use_container_width=True)
 
     with tab2:
-        st.subheader("Automated Inventory Planning")
+        st.subheader("Inventory Optimization (ROP Model)")
         
-        # Calculation Logic
+        # Inventory Logic
         avg_demand = forecast.iloc[-30:]['yhat'].mean()
-        std_error = 5.0 # This could be calculated dynamically from model residuals
+        # std_error can be calculated from model residuals; here we use 5.0 as a safe constant for the demo
+        std_error = 5.0 
         z_scores = {0.90: 1.28, 0.95: 1.645, 0.99: 2.33}
         
         safety_stock = z_scores[service_level] * std_error
         rop = (avg_demand * lead_time) + safety_stock
         
-        # Display Metrics in Columns
+        # Key Metrics
         m1, m2, m3 = st.columns(3)
-        with m1:
-            st.metric("Avg. Predicted Demand", f"{avg_demand:.2f} units/day")
-        with m2:
-            st.metric("Required Safety Stock", f"{safety_stock:.2f} units")
-        with m3:
-            st.metric("Re-order Point (ROP)", f"{rop:.2f} units", delta_color="inverse")
+        m1.metric("Predicted Avg. Demand", f"{avg_demand:.2f} units/day")
+        m2.metric("Safety Stock Required", f"{safety_stock:.2f} units")
+        m3.metric("Re-order Point (ROP)", f"{rop:.2f} units")
 
         st.markdown("---")
         
-        # Actionable Advice
-        st.subheader("💡 Operational Guidance")
-        if rop > 50: # Example logic
-            st.warning(f"**Action Required:** Current calculated ROP is high. Ensure warehouse capacity for at least {rop:.0f} units.")
+        # Order Simulation
+        st.subheader("🛒 Procurement Simulation")
+        col_form, col_status = st.columns([2, 1])
         
-        st.success(f"""
-        **How to use this:** 1. When your physical stock levels drop below **{rop:.2f} units**, place a new order.
-        2. With a Lead Time of **{lead_time} days**, your new stock will arrive just before you run out.
-        3. This setup guarantees a **{service_level*100:.0f}%** probability that you will not face a stockout.
-        """)
-
-        st.markdown("---")
-        st.subheader("🛒 Procurement Action")
-        
-        # สร้างคอลัมน์สำหรับฟอร์มสั่งซื้อ
-        col_order, col_status = st.columns([2, 1])
-        
-        with col_order:
-            order_qty = st.number_input("Enter Order Quantity (Units)", min_value=1, value=int(rop))
-            staff_id = st.text_input("Staff ID / Authorized Person", placeholder="e.g. PHARMA-101")
+        with col_form:
+            order_qty = st.number_input("Order Quantity", min_value=1, value=int(rop))
+            staff_id = st.text_input("Authorizing Staff ID", placeholder="e.g., PHARMA-99")
             
-            # ปุ่มสั่งของ
-            if st.button("🚀 Place Order Now", use_container_width=True):
+            if st.button("Place Supply Order", use_container_width=True):
                 if staff_id:
-                    # จำลองการทำงาน (Simulation)
-                    st.balloons() # เอฟเฟกต์ฉลอง
+                    st.balloons()
                     st.session_state['order_sent'] = True
-                    st.session_state['last_order'] = {"qty": order_qty, "id": staff_id}
+                    st.session_state['last_order'] = {"qty": order_qty, "id": staff_id, "drug": selected_drug}
                 else:
-                    st.error("Please enter Staff ID to authorize this order.")
+                    st.error("Identification required to process order.")
 
         with col_status:
-            st.write("**Order Status**")
+            st.write("**Transaction Status**")
             if 'order_sent' in st.session_state:
-                st.success("✅ Order Sent!")
-                st.write(f"**Qty:** {st.session_state['last_order']['qty']} units")
-                st.write(f"**By:** {st.session_state['last_order']['id']}")
-                st.caption("Sent to: procurement@hospital.com")
+                st.success(f"Order Successful!")
+                st.write(f"**Drug:** {st.session_state['last_order']['drug']}")
+                st.write(f"**Qty:** {st.session_state['last_order']['qty']}")
+                st.write(f"**Authorized By:** {st.session_state['last_order']['id']}")
             else:
-                st.info("No active orders.")
+                st.info("Awaiting user action.")
 
 except Exception as e:
-    st.error(f"Error loading application: {e}")
+    st.error(f"System Error: Unable to initialize dashboard. Please ensure all model files are uploaded. Details: {e}")
