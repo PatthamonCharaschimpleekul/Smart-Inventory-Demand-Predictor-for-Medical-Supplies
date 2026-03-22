@@ -93,3 +93,8 @@ plt.title('Drug Sales Correlation Analysis')
 plt.tight_layout()
 plt.savefig('correlation_heatmap.png')
 plt.show()
+
+import joblib
+# save model Prophet
+joblib.dump(model, 'prophet_model_n02be.pkl')
+print("✅ Success: 'prophet_model_n02be.pkl' has been created!")
