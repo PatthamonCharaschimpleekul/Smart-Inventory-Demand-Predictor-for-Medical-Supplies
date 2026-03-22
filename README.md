@@ -1,4 +1,5 @@
 # 🏥 Smart Pharma Inventory: AI-Driven Demand Forecasting
+🔗 Live AI Dashboard: [Click Link](https://smart-inventory-demand-predictor-for-medical-supplies-7e8trtde.streamlit.app/)
 **An Integrated AI & Management Engineering Solution for Digital Health Operations**
 
 ---
@@ -36,7 +37,7 @@ Using the **Pareto Principle (80/20 Rule)**, we classified inventory to focus ou
 
 ---
 
-## 🤖 Phase 3: Predictive Modeling (Prophet AI)
+## 🤖 Phase 3: Multi-Drug Predictive Modeling (Prophet AI)
 Leveraging Facebook’s Prophet for high-accuracy demand forecasting, accounting for holidays and seasonality.
 
 ### 🔮 Demand Forecast (N02BE)
@@ -48,15 +49,35 @@ Breaking down the AI's logic into Trend, Weekly, and Yearly components to unders
 ![ABC Analysis](output4.png)
 *Insight: AI detected significant demand spikes during weekends and specific seasonal quarters.*
 
+### Scalable Pipeline: 
+Upgraded from a single-drug model to a multi-target forecasting engine supporting Top-3 high-volume categories: N02BE (Analgesics), N05B (Anxiolytics), and R03 (Anti-asthmatics).
+
+### Automated Training: 
+Developed a Python loop to automate model training and serialization (.pkl) for each drug category.
+
+### Accuracy: 
+Achieved high reliability with Time-series decomposition (Trend, Weekly, and Yearly seasonality)
+
 ---
 
-## 🎯 Phase 4: Operational Optimization (Inventory Control)
+## 🎯 Phase 4: Operationalizing AI (Professional Dashboard)
 Converting AI predictions into actionable business decisions using **Statistical Process Control**.
+
+### From Insights to Action: 
+Transformed static AI predictions into a Live Decision Support System using Streamlit.
+
+### Dynamic Inventory Control: 
+Integrated real-time adjustments for Lead Time and Service Level, allowing staff to see the impact on Re-order Points (ROP) instantly.
 
 ### 🛡️ Safety Stock & Re-order Point (ROP)
 We calculated the optimal point to trigger new orders, ensuring a **95% Service Level** for patient safety.
 ![ABC Analysis](output6.png)
 *Action: When stock levels hit the **Re-order Point (Red Line)**, the system triggers an automated replenishment request.*
+
+### Procurement Simulation: 
+Built a simulated "Order Action" module to demonstrate the end-to-end workflow from AI prediction to supply chain replenishment
+![ABC Analysis](ux1.png)
+![ABC Analysis](ux2.png)
 
 ---
 
